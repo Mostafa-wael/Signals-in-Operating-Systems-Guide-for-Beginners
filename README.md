@@ -9,7 +9,9 @@ This guide is designed for beginners who want to learn about signals in Unix/Lin
   - [Introduction](#introduction)
   - [What Are Signals?](#what-are-signals)
   - [Signal Actions](#signal-actions)
-  - [Using Signal Handlers](#using-signal-handlers)
+  - [Sending Signals to a Process](#sending-signals-to-a-process)
+  - [Process Status](#process-status)
+  - [Using Your Own Signal Handlers](#using-your-own-signal-handlers)
   - [Common Functions](#common-functions)
     - [1. `int kill(pid_t pid, int sig);`](#1-int-killpid_t-pid-int-sig)
     - [2. `int raise(int sig);`](#2-int-raiseint-sig)
@@ -20,13 +22,13 @@ This guide is designed for beginners who want to learn about signals in Unix/Lin
     - [Putting It All Together](#putting-it-all-together)
   - [Step-by-Step Examples](#step-by-step-examples)
     - [How to Run the Examples](#how-to-run-the-examples)
-    - [1. **signal01.c**](#1-signal01c)
-    - [2. **signal02.c**](#2-signal02c)
-    - [3. **signal03.c**](#3-signal03c)
-    - [4. **signal04.c**](#4-signal04c)
-    - [5. **signal05.c**](#5-signal05c)
-    - [6. **signal06.c**](#6-signal06c)
-    - [7. **signal07.c**](#7-signal07c)
+    - [1. signal01.c](#1-signal01c)
+    - [2. signal02.c](#2-signal02c)
+    - [3. signal03.c](#3-signal03c)
+    - [4. signal04.c](#4-signal04c)
+    - [5. signal05.c](#5-signal05c)
+    - [6. signal06.c](#6-signal06c)
+    - [7. signal07.c](#7-signal07c)
   - [Conclusion](#conclusion)
 
 ## Introduction
@@ -56,7 +58,35 @@ When a signal occurs, the process can take one of three actions:
 - **Catch the signal:** The process runs a user-defined function called a signal handler.
 - **Default action:** The operating system performs the default action, such as terminating the process.
 
-## Using Signal Handlers
+## Sending Signals to a Process
+
+- Using the keyboard: Ctrl-C sends `SIGINT` to the running process, and Ctrl-Z sends `SIGTSTP`.
+- Using the command line: The `kill` command can be used to send any signal to the process.
+  - Example: `kill -<number> <PID>`.
+  - You can use the process status command `ps` to find the PID of any process.
+- Using system calls: The `kill` system call can also be used to send signals within your program.
+  - Example: `kill(my_pid, SIGSTOP);` send to process with id = `my_pid`.
+  - Example: `raise(SIGSTOP);` send to itself.
+
+## Process Status
+
+**These are some common process states in the `ps` command, they are usually under the `STAT` header:**
+
+- `R` Running - The process is currently running or ready to run (on the CPU or in the queue).
+- `S` Sleeping (Interruptible)- The process is waiting for an event (e.g., user input, disk I/O). It can be woken up by a signal.
+- `D` Uninterruptible Sleep - The process is waiting for I/O (e.g., disk or network), but cannot be interrupted by signals.
+- `T` Stopped - The process is suspended (paused), usually due to `SIGSTOP` or `SIGTSTP` (Ctrl+Z).
+- `Z` Zombie - The process has completed execution, but its parent hasn't read its exit status yet (waiting for `wait()` call to reap it).
+  
+**The `ps` command may also show extra flags next to the process state:**
+
+- `<` High-priority (real-time scheduling).
+- `N` Low-priority (nice process).
+- `s` Session leader (a parent process for a group).
+- `l` Multi-threaded process.
+- `+` Process is running in the foreground.
+    
+## Using Your Own Signal Handlers
 
 To handle a signal, you need to:
 
@@ -89,15 +119,16 @@ To handle a signal, you need to:
    raise(SIGINT);
    ```
 
-Note that, in some UNIX/Linux systems. when a signal handler is called, the system automatically resets the handler to the default action. To prevent this, you can reassign the handler at the end of the handler function:
+>> Note that, in some UNIX/Linux systems. when a signal handler is called, the system automatically resets the handler to the default action. 
+
+**To prevent this behavior, you can reassign the handler at the end of the handler function:**
 
 ```c
 void myHandler(int sig_num) {
     // Print a message or perform an action
     printf("Signal %d is received. Handling it now.\n", sig_num);
     // Re-assign the handler 
-    // This ensures that the handler remains active after each signal is received
-    signal(SIGINT, myHandler);
+    signal(SIGINT, myHandler); // This ensures that the handler remains active after each signal is received
 }
 ```
 
@@ -374,7 +405,7 @@ Each example is designed to be compiled and run on a Unix/Linux system. You can 
     kill -SIGINT <PID>
     ```
 
-### 1. **signal01.c**  
+### 1. signal01.c
 
 A simple program with an infinite loop. Use this to practice sending signals (like `SIGINT`, `SIGSTOP`) from the terminal.
 
@@ -410,7 +441,7 @@ int main() {
 
 ---
 
-### 2. **signal02.c**  
+### 2. signal02.c 
 
 Demonstrates installing a user-defined signal handler for `SIGINT` (triggered by Ctrl-C).
 
@@ -444,7 +475,7 @@ int main() {
 
 ---
 
-### 3. **signal03.c**
+### 3. signal03.c
 
 Shows how to catch `SIGCHLD` (sent to the parent when a child process terminates). We also catch the exit code from the child process.
 
@@ -506,7 +537,7 @@ int main() {
 
 ---
 
-### 4. **signal04.c**  
+### 4. signal04.c
 
 Illustrates using `raise()` to send a signal to the **same** process (self-signaling).
 
@@ -543,7 +574,7 @@ int main() {
 
 ---
 
-### 5. **signal05.c**  
+### 5. signal05.c
 
 Demonstrates how a child process inherits the signal disposition from its parent.
 
@@ -591,7 +622,7 @@ int main() {
 
 ---
 
-### 6. **signal06.c**  
+### 6. signal06.c
 
 Shows how to send signals to **all processes** in the same process group using `killpg()` and `getpgrp()`.
 
@@ -652,7 +683,7 @@ int main() {
 
 ---
 
-### 7. **signal07.c**  
+### 7. signal07.c
 
 Demonstrates using `alarm()` to set a timeout (triggers `SIGALRM`).
 
